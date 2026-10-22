@@ -1,0 +1,57 @@
+menu "FS*Fader"
+
+    config FSF_RDM_MANUFACTURER_ID
+        hex "ESTA manufacturer ID used for the RDM UID"
+        default 0x7FF0
+        range 0x0001 0x7FFF
+        help
+            The RDM UID is <manufacturer ID>:<last 4 bytes of the Ethernet MAC>.
+            0x7FF0-0x7FFF are reserved by ESTA for prototyping. Replace with your own
+            ESTA manufacturer ID before deploying more than one device per network
+            from different builders.
+
+    config FSF_FADER_GPIO
+        int "Unit Fader analog GPIO (Grove white wire)"
+        default 54
+
+    config FSF_FADER_RAW_MIN
+        int "Fader ADC reading treated as 0 %"
+        default 80
+        range 0 2000
+    config FSF_FADER_RAW_MAX
+        int "Fader ADC reading treated as 100 %"
+        default 3950
+        range 2100 4095
+        help
+            The web status page shows the live raw ADC value; adjust these if the fader
+            cannot reach 0 % or 100 %.
+
+    config FSF_PIXEL_GPIO
+        int "Unit Fader SK6812 data GPIO (Grove yellow wire)"
+        default 53
+
+    config FSF_STATUS_LED_R_GPIO
+        int "On-board RGB LED red GPIO (-1 to disable)"
+        default 17
+    config FSF_STATUS_LED_G_GPIO
+        int "On-board RGB LED green GPIO (-1 to disable)"
+        default 15
+    config FSF_STATUS_LED_B_GPIO
+        int "On-board RGB LED blue GPIO (-1 to disable)"
+        default 16
+    config FSF_STATUS_LED_ACTIVE_LOW
+        bool "On-board RGB LED is active-low"
+        default y
+
+    config FSF_BUTTON_GPIO
+        int "User button GPIO (hold 10 s at runtime for factory reset, -1 to disable)"
+        default 45
+
+    config FSF_ETH_PHY_ADDR
+        int "Ethernet PHY address"
+        default 1
+    config FSF_ETH_PHY_RST_GPIO
+        int "Ethernet PHY reset GPIO"
+        default 51
+
+endmenu

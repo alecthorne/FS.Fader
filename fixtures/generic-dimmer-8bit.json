@@ -1,0 +1,16 @@
+{
+  "format": "fsfader-profile/1",
+  "id": "generic-dimmer-8bit",
+  "manufacturer": "Generic",
+  "model": "Dimmer",
+  "mode": "8-bit",
+  "footprint": 1,
+  "parameters": {
+    "intensity": {
+      "offset": 1,
+      "bits": 8
+    }
+  },
+  "notes": "Single 8-bit intensity channel.",
+  "source": "Generic"
+}

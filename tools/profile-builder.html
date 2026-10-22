@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FS*Fader Profile Builder</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--fg:#1d2330;--muted:#677084;--line:#dde1e8;--accent:#3d5afe;--ok:#1b9e55;--bad:#d33;--input:#fff}
+@media (prefers-color-scheme:dark){:root{--bg:#12151b;--card:#1b2029;--fg:#e6e9ef;--muted:#9099ab;--line:#2c3340;--accent:#7c8cff;--input:#11151c}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{padding:16px;border-bottom:1px solid var(--line);background:var(--card)}
+header h1{margin:0;font-size:20px}
+header p{margin:4px 0 0;color:var(--muted);font-size:13px}
+main{max-width:1100px;margin:0 auto;padding:16px;display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+section.wide{grid-column:1/-1}
+h2{margin:0 0 10px;font-size:16px}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+input,select,textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--input);color:var(--fg);font:inherit}
+input[type=checkbox]{width:auto}
+textarea{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;min-height:300px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button,.btn{display:inline-block;padding:8px 14px;border-radius:6px;border:1px solid var(--line);background:var(--card);color:var(--fg);font:inherit;cursor:pointer;text-decoration:none}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.note{font-size:13px;color:var(--muted)}
+.msg{margin-top:10px;font-size:14px;min-height:1.4em}
+.msg.err{color:var(--bad)}.msg.ok{color:var(--ok)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td,th{text-align:left;padding:6px 4px;border-bottom:1px solid var(--line)}
+td input,td select{padding:5px 6px}
+.hidden{display:none}
+@media (max-width:520px){.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1>FS*Fader Profile Builder</h1>
+  <p>Create fixture profiles for FS*Fader: fetch a fixture from the Open Fixture Library or enter the DMX map by hand, then download the JSON file or send it straight to a device.</p>
+</header>
+<main>
+
+<section>
+  <h2>1 · Fetch from the internet</h2>
+  <p class="note">Data comes from the <a href="https://open-fixture-library.org" target="_blank" rel="noopener">Open Fixture Library</a> (via GitHub). Always check the result against the fixture's manual.</p>
+  <label for="ofl-man">Manufacturer</label>
+  <select id="ofl-man"><option value="">Loading…</option></select>
+  <label for="ofl-filter">Fixture (type to filter)</label>
+  <input id="ofl-filter" placeholder="e.g. encore">
+  <select id="ofl-fixture" size="6" style="margin-top:6px"></select>
+  <label for="ofl-mode">DMX mode</label>
+  <select id="ofl-mode"></select>
+  <div class="actions"><button class="primary" id="ofl-use">Use this mode</button></div>
+  <label for="ofl-url">…or paste an Open Fixture Library fixture URL</label>
+  <div class="row"><input id="ofl-url" placeholder="https://open-fixture-library.org/martin/mac-encore-performance"><button id="ofl-url-go">Fetch</button></div>
+  <div class="msg" id="ofl-msg"></div>
+</section>
+
+<section>
+  <h2>2 · Fixture details</h2>
+  <div class="row">
+    <div><label for="manufacturer">Manufacturer</label><input id="manufacturer" maxlength="47"></div>
+    <div><label for="model">Model</label><input id="model" maxlength="63"></div>
+  </div>
+  <div class="row">
+    <div><label for="mode">Mode</label><input id="mode" maxlength="47"></div>
+    <div><label for="footprint">DMX footprint (channels)</label><input id="footprint" type="number" min="1" max="512" value="1"></div>
+  </div>
+  <label for="pid">Profile id (a-z, 0-9, - _ .)</label>
+  <input id="pid" maxlength="47">
+  <label for="notes">Notes</label><input id="notes">
+  <label for="source">Source</label><input id="source">
+  <div class="actions">
+    <label class="btn" style="margin:0;color:var(--fg)">Open profile file…<input type="file" id="open" accept=".json" class="hidden"></label>
+    <button id="clear">New / clear</button>
+  </div>
+</section>
+
+<section class="wide">
+  <h2>3 · Locally controllable parameters</h2>
+  <p class="note">Channel = position inside the fixture's footprint (channel 1 = the fixture's start address). For 16-bit parameters the fine byte is the next channel. "Fader bottom/top" are DMX values in the parameter's own resolution (0-255 or 0-65535); use them to avoid effect ranges or to reverse the direction.</p>
+  <table>
+    <thead><tr><th>Parameter</th><th>Present</th><th>Channel</th><th>Resolution</th><th>Fader bottom</th><th>Fader top</th></tr></thead>
+    <tbody id="params"></tbody>
+  </table>
+</section>
+
+<section class="wide">
+  <h2>4 · Save</h2>
+  <textarea id="json" spellcheck="false"></textarea>
+  <div class="actions">
+    <button class="primary" id="download">Download .json</button>
+    <button id="copy">Copy</button>
+    <button id="parse">Load edited JSON into form</button>
+  </div>
+  <div class="row" style="margin-top:12px">
+    <div><label for="device">FS*Fader address</label><input id="device" placeholder="http://192.168.1.50"></div>
+    <div style="align-self:end"><button id="send">Send to device</button></div>
+  </div>
+  <div class="msg" id="out-msg"></div>
+</section>
+
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const PARAMS = [['intensity', 'Intensity'], ['iris', 'Iris'], ['zoom', 'Zoom'], ['edge', 'Edge (focus)'], ['frost', 'Frost']];
+const RAW = 'https://raw.githubusercontent.com/OpenLightingProject/open-fixture-library/master/fixtures/';
+const API = 'https://api.github.com/repos/OpenLightingProject/open-fixture-library/contents/fixtures/';
+let oflFixtures = [], oflData = null, oflKey = '';
+
+function msg(el, text, ok) { el.textContent = text; el.className = 'msg ' + (ok ? 'ok' : 'err'); }
+function slug(s) { return s.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 47); }
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ---------- parameter table ---------- */
+$('params').innerHTML = PARAMS.map(([k, label]) => `<tr>
+  <td>${label}</td>
+  <td><input type="checkbox" id="p-${k}-on"></td>
+  <td><input type="number" id="p-${k}-ch" min="1" max="512" value="1"></td>
+  <td><select id="p-${k}-bits"><option value="8">8-bit</option><option value="16">16-bit</option></select></td>
+  <td><input type="number" id="p-${k}-from" min="0" max="65535" value="0"></td>
+  <td><input type="number" id="p-${k}-to" min="0" max="65535" value="255"></td></tr>`).join('');
+PARAMS.forEach(([k]) => $(`p-${k}-bits`).addEventListener('change', () => {
+  const max = $(`p-${k}-bits`).value === '16' ? 65535 : 255;
+  $(`p-${k}-from`).value = 0; $(`p-${k}-to`).value = max; render();
+}));
+
+function buildProfile() {
+  const p = {format: 'fsfader-profile/1', id: $('pid').value.trim() || slug([$('manufacturer').value, $('model').value, $('mode').value].join(' ')),
+    manufacturer: $('manufacturer').value.trim(), model: $('model').value.trim(), mode: $('mode').value.trim(),
+    footprint: Number($('footprint').value), parameters: {}};
+  for (const [k] of PARAMS) {
+    if (!$(`p-${k}-on`).checked) continue;
+    const bits = Number($(`p-${k}-bits`).value), max = bits === 16 ? 65535 : 255;
+    const e = {offset: Number($(`p-${k}-ch`).value), bits};
+    const from = Number($(`p-${k}-from`).value), to = Number($(`p-${k}-to`).value);
+    if (!(from === 0 && to === max)) e.range = [from, to];
+    p.parameters[k] = e;
+  }
+  if ($('notes').value.trim()) p.notes = $('notes').value.trim();
+  if ($('source').value.trim()) p.source = $('source').value.trim();
+  return p;
+}
+function validate(p) {
+  const errs = [];
+  if (!/^[a-z0-9._-]{1,47}$/.test(p.id)) errs.push('id must be 1-47 characters of a-z, 0-9, - _ .');
+  if (!p.manufacturer) errs.push('manufacturer is required');
+  if (!p.model) errs.push('model is required');
+  if (!(p.footprint >= 1 && p.footprint <= 512)) errs.push('footprint must be 1-512');
+  const used = [];
+  for (const [k, e] of Object.entries(p.parameters)) {
+    const last = e.offset + (e.bits === 16 ? 1 : 0), max = e.bits === 16 ? 65535 : 255;
+    if (e.offset < 1 || last > p.footprint) errs.push(`${k}: channel must be inside the footprint`);
+    if (e.range && (e.range[0] < 0 || e.range[1] < 0 || e.range[0] > max || e.range[1] > max || e.range[0] === e.range[1])) errs.push(`${k}: fader range must be two different values 0-${max}`);
+    for (let c = e.offset; c <= last; c++) { if (used.includes(c)) errs.push(`${k}: channel ${c} is already used`); used.push(c); }
+  }
+  return errs;
+}
+function render() {
+  const p = buildProfile();
+  $('json').value = JSON.stringify(p, null, 2);
+  const errs = validate(p);
+  if (errs.length) msg($('out-msg'), errs.join('; ')); else msg($('out-msg'), 'Profile is valid.', true);
+}
+document.querySelectorAll('main input, main select').forEach(el => {
+  if (!el.id.startsWith('ofl') && el.id !== 'device' && el.id !== 'open') el.addEventListener('input', render);
+});
+
+function loadProfile(p) {
+  $('manufacturer').value = p.manufacturer || ''; $('model').value = p.model || ''; $('mode').value = p.mode || '';
+  $('footprint').value = p.footprint || 1; $('pid').value = p.id || ''; $('notes').value = p.notes || ''; $('source').value = p.source || '';
+  for (const [k] of PARAMS) {
+    const e = (p.parameters || {})[k];
+    $(`p-${k}-on`).checked = !!e;
+    const bits = e && e.bits === 16 ? 16 : 8, max = bits === 16 ? 65535 : 255;
+    $(`p-${k}-ch`).value = e ? e.offset : 1;
+    $(`p-${k}-bits`).value = String(bits);
+    $(`p-${k}-from`).value = e && e.range ? e.range[0] : 0;
+    $(`p-${k}-to`).value = e && e.range ? e.range[1] : max;
+  }
+  render();
+}
+
+/* ---------- Open Fixture Library ---------- */
+async function getJson(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`${r.status} ${r.statusText} (${url})`);
+  return r.json();
+}
+async function loadManufacturers() {
+  try {
+    const m = await getJson(RAW + 'manufacturers.json');
+    const keys = Object.keys(m).filter(k => !k.startsWith('$')).sort((a, b) => m[a].name.localeCompare(m[b].name));
+    $('ofl-man').innerHTML = '<option value="">Choose…</option>' + keys.map(k => `<option value="${esc(k)}">${esc(m[k].name)}</option>`).join('');
+  } catch (e) {
+    $('ofl-man').innerHTML = '<option value="">(offline)</option>';
+    msg($('ofl-msg'), 'Could not reach the Open Fixture Library (' + e.message + '). You can still enter the profile by hand.');
+  }
+}
+$('ofl-man').onchange = async () => {
+  const man = $('ofl-man').value; if (!man) return;
+  msg($('ofl-msg'), 'Loading fixtures…', true);
+  try {
+    const list = await getJson(API + encodeURIComponent(man));
+    oflFixtures = list.filter(f => f.name.endsWith('.json')).map(f => ({key: man + '/' + f.name.replace(/\.json$/, ''), name: f.name.replace(/\.json$/, '')}));
+    filterFixtures(); msg($('ofl-msg'), `${oflFixtures.length} fixtures.`, true);
+  } catch (e) { msg($('ofl-msg'), 'Fixture list failed: ' + e.message + ' (GitHub allows 60 lookups per hour; paste a fixture URL instead).'); }
+};
+function filterFixtures() {
+  const q = $('ofl-filter').value.toLowerCase();
+  $('ofl-fixture').innerHTML = oflFixtures.filter(f => f.name.includes(q)).map(f => `<option value="${esc(f.key)}">${esc(f.name)}</option>`).join('');
+}
+$('ofl-filter').oninput = filterFixtures;
+$('ofl-fixture').onchange = () => fetchFixture($('ofl-fixture').value);
+$('ofl-url-go').onclick = () => {
+  const m = $('ofl-url').value.trim().match(/open-fixture-library\.org\/([a-z0-9-]+)\/([a-z0-9-]+)/i) ||
+            $('ofl-url').value.trim().match(/fixtures\/([a-z0-9-]+)\/([a-z0-9-]+)(\.json)?/i);
+  if (!m) return msg($('ofl-msg'), 'Expected a URL like https://open-fixture-library.org/manufacturer/fixture');
+  fetchFixture(m[1] + '/' + m[2]);
+};
+async function fetchFixture(key) {
+  msg($('ofl-msg'), 'Loading ' + key + '…', true);
+  try {
+    const [man] = key.split('/');
+    oflData = await getJson(RAW + key + '.json'); oflKey = key;
+    const mans = await getJson(RAW + 'manufacturers.json').catch(() => ({}));
+    oflData._manufacturer = (mans[man] && mans[man].name) || man;
+    $('ofl-mode').innerHTML = oflData.modes.map((m, i) => `<option value="${i}">${esc(m.name)} (${m.channels.length} ch)</option>`).join('');
+    msg($('ofl-msg'), `${oflData._manufacturer} ${oflData.name}: choose a mode.`, true);
+  } catch (e) { msg($('ofl-msg'), 'Fetch failed: ' + e.message); }
+}
+
+/* Map OFL capability types to FS*Fader parameters. */
+const TYPE_MAP = {Intensity: 'intensity', Iris: 'iris', Zoom: 'zoom', Focus: 'edge', Frost: 'frost'};
+function channelInfo(fx, name) {
+  const ch = (fx.availableChannels || {})[name] || (fx.templateChannels || {})[name];
+  return ch || null;
+}
+function findFineOwner(fx, name) {
+  for (const [k, ch] of Object.entries(fx.availableChannels || {})) {
+    if ((ch.fineChannelAliases || []).includes(name)) return k;
+  }
+  return null;
+}
+$('ofl-use').onclick = () => {
+  if (!oflData) return msg($('ofl-msg'), 'Fetch a fixture first.');
+  const mode = oflData.modes[Number($('ofl-mode').value) || 0];
+  const chans = mode.channels;
+  const warn = [];
+  if (chans.some(c => typeof c !== 'string')) warn.push('this mode contains matrix/template channels; check the footprint and channel numbers');
+  const prof = {id: slug(oflKey.replace('/', '-') + '-' + (mode.shortName || mode.name)), manufacturer: oflData._manufacturer,
+    model: oflData.name, mode: mode.name, footprint: chans.length, parameters: {},
+    source: 'Open Fixture Library ' + oflKey + ' (verify against the manual)'};
+  chans.forEach((name, idx) => {
+    if (typeof name !== 'string') return;
+    if (findFineOwner(oflData, name)) return; /* fine byte: handled with its coarse channel */
+    const ch = channelInfo(oflData, name); if (!ch) return;
+    const caps = ch.capability ? [ch.capability] : (ch.capabilities || []);
+    const cap = caps.find(c => TYPE_MAP[c.type]);
+    if (!cap) return;
+    const key = TYPE_MAP[cap.type];
+    if (prof.parameters[key]) return; /* keep the first match */
+    const fine = (ch.fineChannelAliases || [])[0];
+    const sixteen = fine && chans[idx + 1] === fine;
+    const e = {offset: idx + 1, bits: sixteen ? 16 : 8};
+    if (ch.capabilities && cap.dmxRange) {
+      let [a, b] = cap.dmxRange;
+      const res16 = ch.dmxValueResolution === '16bit';
+      if (sixteen && !res16) { a = a * 256; b = b * 256 + 255; }
+      if (!sixteen && res16) { a = a >> 8; b = b >> 8; }
+      const max = sixteen ? 65535 : 255;
+      if (!(a === 0 && b === max)) e.range = [a, b];
+    }
+    prof.parameters[key] = e;
+  });
+  loadProfile(prof);
+  msg($('ofl-msg'), `Loaded mode "${mode.name}". Found: ${Object.keys(prof.parameters).join(', ') || 'no controllable parameters'}.` + (warn.length ? ' Warning: ' + warn.join('; ') : ''), !warn.length);
+};
+
+/* ---------- file I/O ---------- */
+$('open').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try { const p = JSON.parse(await f.text()); loadProfile(Array.isArray(p) ? p[0] : p); msg($('out-msg'), 'Opened ' + f.name, true); }
+  catch (err) { msg($('out-msg'), err.message); }
+  e.target.value = '';
+};
+$('clear').onclick = () => loadProfile({footprint: 1, parameters: {}});
+$('parse').onclick = () => { try { loadProfile(JSON.parse($('json').value)); } catch (e) { msg($('out-msg'), 'JSON syntax error: ' + e.message); } };
+$('download').onclick = () => {
+  const p = buildProfile(), errs = validate(p);
+  if (errs.length) return msg($('out-msg'), errs.join('; '));
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(p, null, 2) + '\n'], {type: 'application/json'}));
+  a.download = p.id + '.json'; a.click(); URL.revokeObjectURL(a.href);
+};
+$('copy').onclick = () => navigator.clipboard.writeText($('json').value).then(() => msg($('out-msg'), 'Copied.', true));
+$('send').onclick = async () => {
+  const p = buildProfile(), errs = validate(p);
+  if (errs.length) return msg($('out-msg'), errs.join('; '));
+  let base = $('device').value.trim() || location.origin;
+  if (!/^https?:\/\//.test(base)) base = 'http://' + base;
+  try {
+    const r = await fetch(base.replace(/\/$/, '') + '/api/fixtures', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(p)});
+    const b = await r.json();
+    if (!r.ok) throw new Error((b.errors || [b.error]).join('; '));
+    msg($('out-msg'), 'Installed on device as ' + b.installed.join(', '), true);
+  } catch (e) { msg($('out-msg'), 'Upload failed: ' + e.message); }
+};
+
+if (location.protocol.startsWith('http') && !location.hostname.includes('github')) $('device').value = location.origin;
+loadProfile({footprint: 1, parameters: {}});
+loadManufacturers();
+</script>
+</body>
+</html>

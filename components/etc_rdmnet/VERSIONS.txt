@@ -1,0 +1,6 @@
+Vendored upstream sources (Apache License 2.0, see each LICENSE file):
+EtcPal  https://github.com/ETCLabs/EtcPal  da14d39a1d1a2d47a481288dd2f9826aaab0cf88
+RDM     https://github.com/ETCLabs/RDM     db1bfefab9aac96a2c790bb8d5fe079ff1a59650
+RDMnet  https://github.com/ETCLabs/RDMnet  c59acb37b0248aa802c55d2dff522c47179f90df
+Only the sources needed for an RDMnet Device + LLRP Target are included (no broker, no C++ wrappers).
+Local changes are listed in PATCHES.txt (if any).

@@ -1,0 +1,6 @@
+Local changes to the vendored ETC sources (keep when updating):
+1. EtcPal/src/os/freertos/etcpal/os_rwlock.c: portENTER_CRITICAL()/portEXIT_CRITICAL() take a
+   spinlock on ESP-IDF's SMP FreeRTOS; wrapped in ETCPAL_RWLOCK_*_CRITICAL() macros.
+2. EtcPal/src/os/freertos/etcpal/os_thread.c: ESP-IDF's xTaskCreate() stack depth is in bytes,
+   so the stack size is passed through unchanged (upstream divides by sizeof(StackType_t)).
+3. EtcPal/include/os/freertos/etcpal/os_thread.h: default thread stack 4096 bytes on ESP-IDF.

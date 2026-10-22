@@ -1,0 +1,16 @@
+{
+  "format": "fsfader-profile/1",
+  "id": "etc-colorsource-spot-v-direct",
+  "manufacturer": "ETC",
+  "model": "ColorSource Spot V",
+  "mode": "Direct",
+  "footprint": 8,
+  "parameters": {
+    "intensity": {
+      "offset": 1,
+      "bits": 8
+    }
+  },
+  "notes": "Ch1 Intensity; Ch2 Red; Ch3 Green; Ch4 Blue; Ch5 Indigo; Ch6 Lime; Ch7 Strobe; Ch8 Fan.",
+  "source": "ETC ColorSource Spot V datasheet, Direct mode"
+}

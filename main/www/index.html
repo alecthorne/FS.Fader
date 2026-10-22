@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FS*Fader</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--fg:#1d2330;--muted:#677084;--line:#dde1e8;--accent:#3d5afe;--ok:#1b9e55;--warn:#d98a00;--bad:#d33;--input:#fff}
+@media (prefers-color-scheme:dark){:root{--bg:#12151b;--card:#1b2029;--fg:#e6e9ef;--muted:#9099ab;--line:#2c3340;--accent:#7c8cff;--input:#11151c}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{padding:16px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);background:var(--card)}
+header h1{margin:0;font-size:20px}
+header .sub{color:var(--muted);font-size:13px}
+main{max-width:1100px;margin:0 auto;padding:16px;display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+section h2{margin:0 0 12px;font-size:16px}
+section.wide{grid-column:1/-1}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+input,select,textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--input);color:var(--fg);font:inherit}
+textarea{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;min-height:260px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+button,.btn{display:inline-block;padding:8px 14px;border-radius:6px;border:1px solid var(--line);background:var(--card);color:var(--fg);font:inherit;cursor:pointer;text-decoration:none}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.danger{color:var(--bad)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;border:1px solid var(--line);color:var(--muted);margin-right:6px}
+.pill.ok{color:var(--ok);border-color:var(--ok)}.pill.warn{color:var(--warn);border-color:var(--warn)}.pill.bad{color:var(--bad);border-color:var(--bad)}
+.meter{height:12px;border-radius:6px;background:var(--line);overflow:hidden;margin:4px 0 10px}
+.meter>div{height:100%;background:var(--accent);width:0}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px}
+.kv span:nth-child(odd){color:var(--muted)}
+.note{font-size:13px;color:var(--muted)}
+.msg{margin-top:10px;font-size:14px;min-height:1.4em}
+.msg.err{color:var(--bad)}.msg.ok{color:var(--ok)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{text-align:left;padding:6px 4px;border-bottom:1px solid var(--line);vertical-align:top}
+.hidden{display:none}
+.leds{display:flex;gap:4px;margin:6px 0}
+.leds i{width:14px;height:14px;border-radius:50%;background:var(--line)}
+@media (max-width:520px){.row,.row3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div><h1 id="title">FS*Fader</h1><div class="sub" id="subtitle">connecting…</div></div>
+  <div id="pills"></div>
+</header>
+<main>
+
+<section>
+  <h2>Live</h2>
+  <div class="kv" id="live"></div>
+  <label>Fader</label><div class="meter"><div id="m-fader"></div></div>
+  <label>Received <span id="t-rx"></span></label><div class="meter"><div id="m-rx"></div></div>
+  <label>Sent <span id="t-tx"></span></label><div class="meter"><div id="m-tx"></div></div>
+  <div id="param-warn" class="msg err"></div>
+  <div class="actions">
+    <button id="identify">Identify</button>
+  </div>
+</section>
+
+<section>
+  <h2>Control</h2>
+  <label for="parameter">Controlled parameter</label>
+  <select id="parameter">
+    <option value="intensity">Intensity</option><option value="iris">Iris</option>
+    <option value="zoom">Zoom</option><option value="edge">Edge</option><option value="frost">Frost</option>
+  </select>
+  <div id="imode-box">
+    <label for="intensity_mode">Intensity Mode</label>
+    <select id="intensity_mode">
+      <option value="scaled">Scaled (received intensity is the upper bound)</option>
+      <option value="local_override">Local Override (ignore received intensity)</option>
+    </select>
+  </div>
+  <label for="fixture">Fixture profile</label>
+  <select id="fixture"></select>
+  <div class="note" id="fixture-info"></div>
+</section>
+
+<section>
+  <h2>sACN</h2>
+  <div class="row">
+    <div><label for="src_universe">Source universe</label><input id="src_universe" type="number" min="1" max="63999"></div>
+    <div><label for="src_address">Source start address</label><input id="src_address" type="number" min="1" max="512"></div>
+  </div>
+  <div class="row3">
+    <div><label for="dst_universe">Destination universe</label><input id="dst_universe" type="number" min="1" max="63999"></div>
+    <div><label for="dst_address">Destination start address</label><input id="dst_address" type="number" min="1" max="512"></div>
+    <div><label for="dst_priority">Priority</label><input id="dst_priority" type="number" min="0" max="200"></div>
+  </div>
+  <p class="note">The whole fixture footprint is copied from the source to the destination; only the controlled parameter is replaced by the fader.</p>
+</section>
+
+<section>
+  <h2>Network</h2>
+  <label for="net_mode">Device IP Mode</label>
+  <select id="net_mode"><option value="dhcp">DHCP (self-assigned 169.254.x.x fallback)</option><option value="static">Static</option></select>
+  <div id="static-box">
+    <label for="ip">Device IP Address</label><input id="ip" placeholder="192.168.1.50">
+    <div class="row">
+      <div><label for="subnet">Subnet</label><input id="subnet" placeholder="255.255.255.0"></div>
+      <div><label for="gateway">Gateway</label><input id="gateway" placeholder="192.168.1.1"></div>
+    </div>
+  </div>
+  <p class="note">After changing the IP settings, reconnect at the new address.</p>
+</section>
+
+<section>
+  <h2>RDMnet (ANSI E1.33)</h2>
+  <label for="device_label">Device label</label><input id="device_label" maxlength="32">
+  <div class="row">
+    <div><label for="scope">Scope</label><input id="scope" maxlength="62"></div>
+    <div><label for="search_domain">Search domain</label><input id="search_domain" maxlength="230"></div>
+  </div>
+  <div class="row">
+    <div><label for="static_broker">Static broker (ip:port, blank = discover)</label><input id="static_broker" placeholder=""></div>
+    <div><label for="identify_timeout">Identify timeout (s, 0 = none)</label><input id="identify_timeout" type="number" min="0" max="65535"></div>
+  </div>
+  <label for="led_brightness">Fader LED brightness (%)</label><input id="led_brightness" type="number" min="1" max="100">
+  <div class="kv" id="rdm" style="margin-top:12px"></div>
+</section>
+
+<section class="wide">
+  <div class="actions" style="margin-top:0">
+    <button class="primary" id="save">Save settings</button>
+    <button id="revert">Revert</button>
+  </div>
+  <div class="msg" id="save-msg"></div>
+</section>
+
+<section class="wide">
+  <h2>Configuration file</h2>
+  <p class="note">Settings are stored on the device as a JSON file. Export it as a backup, import one to restore or clone a device, or edit it directly.</p>
+  <div class="actions">
+    <a class="btn" href="/api/config/export">Export</a>
+    <label class="btn" style="margin:0;color:var(--fg)">Import…<input type="file" id="import" accept=".json,application/json" class="hidden"></label>
+    <button id="edit-load">Edit JSON</button>
+  </div>
+  <div id="edit-box" class="hidden">
+    <textarea id="edit-text" spellcheck="false"></textarea>
+    <div class="actions"><button class="primary" id="edit-apply">Apply JSON</button><button id="edit-close">Close</button></div>
+  </div>
+  <div class="msg" id="file-msg"></div>
+</section>
+
+<section class="wide">
+  <h2>Fixture profiles</h2>
+  <table><thead><tr><th>Profile</th><th>Footprint</th><th>Parameters</th><th></th></tr></thead><tbody id="fx-table"></tbody></table>
+  <div class="actions">
+    <label class="btn" style="margin:0;color:var(--fg)">Upload profile(s)…<input type="file" id="fx-upload" accept=".json,application/json" multiple class="hidden"></label>
+    <a class="btn" href="/profile-builder" target="_blank">Open Profile Builder</a>
+  </div>
+  <div class="msg" id="fx-msg"></div>
+</section>
+
+<section class="wide">
+  <h2>Maintenance</h2>
+  <div class="kv" id="sys"></div>
+  <div class="actions">
+    <label class="btn" style="margin:0;color:var(--fg)">Firmware update (.bin)…<input type="file" id="ota" accept=".bin" class="hidden"></label>
+    <button id="reboot">Reboot</button>
+    <button class="danger" id="factory">Factory reset</button>
+  </div>
+  <div class="msg" id="sys-msg"></div>
+</section>
+
+</main>
+<script>
+const $ = id => document.getElementById(id);
+let cfg = null, fixtures = [], status = null;
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, opts);
+  let body = null;
+  try { body = await r.json(); } catch (e) {}
+  if (!r.ok) throw new Error((body && (body.error || (body.errors || []).join('; '))) || r.statusText);
+  return body;
+}
+function msg(el, text, ok) { el.textContent = text; el.className = 'msg ' + (ok ? 'ok' : 'err'); }
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function kv(el, rows) { el.innerHTML = rows.map(([k, v]) => `<span>${esc(k)}</span><span>${esc(v)}</span>`).join(''); }
+function pill(text, cls) { return `<span class="pill ${cls}">${esc(text)}</span>`; }
+const PARAM_LABEL = {intensity: 'Intensity', iris: 'Iris', zoom: 'Zoom', edge: 'Edge', frost: 'Frost'};
+
+function fillForm(c) {
+  cfg = c;
+  $('net_mode').value = c.network.mode; $('ip').value = c.network.ip; $('subnet').value = c.network.subnet; $('gateway').value = c.network.gateway;
+  $('parameter').value = c.control.parameter; $('intensity_mode').value = c.control.intensity_mode;
+  $('fixture').value = c.fixture;
+  $('src_universe').value = c.source.universe; $('src_address').value = c.source.address;
+  $('dst_universe').value = c.destination.universe; $('dst_address').value = c.destination.address; $('dst_priority').value = c.destination.priority;
+  $('device_label').value = c.rdmnet.device_label; $('scope').value = c.rdmnet.scope; $('search_domain').value = c.rdmnet.search_domain;
+  $('static_broker').value = c.rdmnet.static_broker; $('identify_timeout').value = c.rdmnet.identify_timeout;
+  $('led_brightness').value = c.leds.brightness;
+  updateVisibility();
+}
+function formJson() {
+  const n = id => Number($(id).value);
+  return {
+    format: 'fsfader-config/1',
+    network: {mode: $('net_mode').value, ip: $('ip').value.trim(), subnet: $('subnet').value.trim(), gateway: $('gateway').value.trim()},
+    control: {parameter: $('parameter').value, intensity_mode: $('intensity_mode').value},
+    fixture: $('fixture').value,
+    source: {universe: n('src_universe'), address: n('src_address')},
+    destination: {universe: n('dst_universe'), address: n('dst_address'), priority: n('dst_priority')},
+    rdmnet: {device_label: $('device_label').value, scope: $('scope').value, search_domain: $('search_domain').value,
+             static_broker: $('static_broker').value.trim(), identify_timeout: n('identify_timeout')},
+    leds: {brightness: n('led_brightness')}
+  };
+}
+function updateVisibility() {
+  $('static-box').classList.toggle('hidden', $('net_mode').value !== 'static');
+  $('imode-box').classList.toggle('hidden', $('parameter').value !== 'intensity');
+  const fx = fixtures.find(f => f.id === $('fixture').value);
+  if (fx) {
+    const ps = Object.entries(fx.parameters).map(([k, p]) => `${PARAM_LABEL[k]} ch${p.offset}${p.bits === 16 ? '/' + (p.offset + 1) + ' (16-bit)' : ''}`);
+    $('fixture-info').textContent = `${fx.footprint} channel${fx.footprint === 1 ? '' : 's'}. ${ps.join(', ') || 'No locally controllable parameters'}.` +
+      (fx.parameters[$('parameter').value] ? '' : ` This profile has no ${PARAM_LABEL[$('parameter').value]} parameter.`);
+  }
+}
+['net_mode', 'parameter', 'fixture'].forEach(id => $(id).addEventListener('change', updateVisibility));
+
+async function loadFixtures() {
+  fixtures = await api('/api/fixtures');
+  const cur = $('fixture').value;
+  $('fixture').innerHTML = fixtures.map(f => `<option value="${esc(f.id)}">${esc(f.manufacturer + ' ' + f.model + (f.mode ? ' (' + f.mode + ')' : ''))}</option>`).join('');
+  if (cur) $('fixture').value = cur;
+  $('fx-table').innerHTML = fixtures.map(f => `<tr><td>${esc(f.manufacturer + ' ' + f.model)}${f.mode ? '<br><span class="note">' + esc(f.mode) + '</span>' : ''}<br><span class="note">${esc(f.id)}${f.builtin ? ' · built-in' : ''}</span></td>
+    <td>${f.footprint}</td><td>${Object.entries(f.parameters).map(([k, p]) => esc(PARAM_LABEL[k] + ' ' + p.offset + (p.bits === 16 ? ' (16-bit)' : ''))).join('<br>')}</td>
+    <td><a class="btn" href="/api/fixtures/get?id=${encodeURIComponent(f.id)}" download="${esc(f.id)}.json">JSON</a>
+    ${f.builtin ? '' : `<button class="danger" data-del="${esc(f.id)}">Delete</button>`}</td></tr>`).join('');
+  document.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    if (!confirm('Delete profile ' + b.dataset.del + '?')) return;
+    try { await api('/api/fixtures/delete?id=' + encodeURIComponent(b.dataset.del), {method: 'POST'}); msg($('fx-msg'), 'Deleted.', true); loadFixtures(); }
+    catch (e) { msg($('fx-msg'), e.message); }
+  });
+  updateVisibility();
+}
+
+async function refreshStatus() {
+  try {
+    const s = status = await api('/api/status');
+    $('title').textContent = s.device.label;
+    $('subtitle').textContent = `${s.device.hostname} · ${s.network.ip || 'no IP'} · firmware ${s.device.firmware}`;
+    $('pills').innerHTML =
+      pill(s.network.link ? (s.network.link_local ? 'Link-local IP' : 'Network OK') : 'No link', s.network.link ? (s.network.link_local ? 'warn' : 'ok') : 'bad') +
+      pill(s.sacn.receiving ? 'sACN in' : (s.sacn.have_data ? 'sACN lost (holding)' : 'No sACN'), s.sacn.receiving ? 'ok' : 'warn') +
+      pill(s.rdmnet.connected ? 'RDMnet broker' : 'No broker', s.rdmnet.connected ? 'ok' : '');
+    const c = s.control, max = c.bits === 16 ? 65535 : 255;
+    $('m-fader').style.width = c.fader_percent.toFixed(1) + '%';
+    $('m-rx').style.width = c.received_percent + '%'; $('m-tx').style.width = c.sent_percent + '%';
+    $('t-rx').textContent = c.parameter_in_profile ? `${c.received} / ${max} (${c.received_percent}%)` : '';
+    $('t-tx').textContent = c.parameter_in_profile ? `${c.sent} / ${max} (${c.sent_percent}%)` : '';
+    $('param-warn').textContent = c.parameter_in_profile ? '' : 'The selected fixture profile does not contain the controlled parameter; data is passed through unchanged.';
+    kv($('live'), [
+      ['Sources', s.sacn.sources.map(x => `${x.name} (${x.ip}, prio ${x.priority})`).join(', ') || 'none'],
+      ['Packets', `${s.sacn.packets} received, ${s.sacn.sequence_dropped} out of order`],
+      ['Fader', `${c.fader_percent.toFixed(1)}% (ADC ${c.fader_adc_raw})`],
+    ]);
+    $('identify').textContent = c.identify ? `Stop identify${c.identify_remaining_s ? ' (' + c.identify_remaining_s + ' s)' : ''}` : 'Identify';
+    kv($('rdm'), [['UID', s.rdmnet.uid], ['Broker', s.rdmnet.connected ? s.rdmnet.broker : (s.rdmnet.running ? 'searching' : 'stopped')],
+      ['Unhealthy TCP events', s.rdmnet.unhealthy_tcp_events], ['Last event', s.rdmnet.last_event || '-']]);
+    const up = s.device.uptime_s;
+    kv($('sys'), [['MAC', s.device.mac], ['Uptime', `${Math.floor(up / 86400)}d ${Math.floor(up % 86400 / 3600)}h ${Math.floor(up % 3600 / 60)}m`],
+      ['Free memory', `${(s.device.free_heap / 1024).toFixed(0)} KB (lowest ${(s.device.min_free_heap / 1024).toFixed(0)} KB)`],
+      ['Last reset', s.device.reset_reason], ['Network', `${s.network.mode.toUpperCase()} ${s.network.ip} / ${s.network.subnet} gw ${s.network.gateway || '-'}`]]);
+  } catch (e) {
+    $('subtitle').textContent = 'connection lost: ' + e.message;
+  }
+}
+
+$('save').onclick = async () => {
+  try { fillForm(await api('/api/config', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(formJson())})); msg($('save-msg'), 'Saved.', true); }
+  catch (e) { msg($('save-msg'), e.message); }
+};
+$('revert').onclick = () => { fillForm(cfg); msg($('save-msg'), 'Reverted to saved settings.', true); };
+$('identify').onclick = () => api('/api/identify', {method: 'POST', body: JSON.stringify({on: !(status && status.control.identify)})}).then(refreshStatus);
+
+$('import').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try { fillForm(await api('/api/config/import', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: await f.text()})); msg($('file-msg'), 'Imported ' + f.name + '.', true); }
+  catch (err) { msg($('file-msg'), err.message); }
+  e.target.value = '';
+};
+$('edit-load').onclick = async () => { $('edit-text').value = JSON.stringify(await api('/api/config'), null, 2); $('edit-box').classList.remove('hidden'); };
+$('edit-close').onclick = () => $('edit-box').classList.add('hidden');
+$('edit-apply').onclick = async () => {
+  try { JSON.parse($('edit-text').value); } catch (e) { return msg($('file-msg'), 'JSON syntax error: ' + e.message); }
+  try { fillForm(await api('/api/config', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: $('edit-text').value})); msg($('file-msg'), 'Applied.', true); }
+  catch (e) { msg($('file-msg'), e.message); }
+};
+
+$('fx-upload').onchange = async e => {
+  const out = [];
+  for (const f of e.target.files) {
+    try { const r = await api('/api/fixtures', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: await f.text()}); out.push(`${f.name}: installed ${r.installed.join(', ')}`); }
+    catch (err) { out.push(`${f.name}: ${err.message}`); }
+  }
+  msg($('fx-msg'), out.join(' · '), !out.some(x => !x.includes('installed')));
+  e.target.value = ''; loadFixtures();
+};
+
+$('ota').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  if (!confirm(`Install firmware ${f.name} (${(f.size / 1024).toFixed(0)} KB)? The device restarts afterwards.`)) { e.target.value = ''; return; }
+  msg($('sys-msg'), 'Uploading… do not power off.', true);
+  try { await api('/api/ota', {method: 'POST', headers: {'Content-Type': 'application/octet-stream'}, body: f}); msg($('sys-msg'), 'Installed. Restarting…', true); }
+  catch (err) { msg($('sys-msg'), err.message); }
+  e.target.value = '';
+};
+$('reboot').onclick = async () => { if (confirm('Reboot the device?')) { await api('/api/reboot', {method: 'POST'}); msg($('sys-msg'), 'Restarting…', true); } };
+$('factory').onclick = async () => {
+  if (!confirm('Erase all settings and uploaded fixture profiles, then restart with defaults (DHCP)?')) return;
+  await api('/api/factory-reset', {method: 'POST'}); msg($('sys-msg'), 'Reset. Restarting with defaults…', true);
+};
+
+(async () => {
+  try { await loadFixtures(); fillForm(await api('/api/config')); } catch (e) { msg($('save-msg'), e.message); }
+  refreshStatus(); setInterval(refreshStatus, 500);
+})();
+</script>
+</body>
+</html>
