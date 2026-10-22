@@ -1,0 +1,16 @@
+{
+  "format": "fsfader-profile/1",
+  "id": "generic-dmx-iris-8bit",
+  "manufacturer": "Generic",
+  "model": "DMX Iris",
+  "mode": "8-bit",
+  "footprint": 1,
+  "parameters": {
+    "iris": {
+      "offset": 1,
+      "bits": 8
+    }
+  },
+  "notes": "Single 8-bit iris channel (0 = open, 255 = closed on most DMX irises; reverse 'range' if yours differs).",
+  "source": "Generic"
+}

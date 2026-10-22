@@ -1,0 +1,4 @@
+## FS*Fader has no external managed-component dependencies:
+## the RDMnet stack is vendored in components/etc_rdmnet.
+dependencies:
+  idf: ">=5.5.0"

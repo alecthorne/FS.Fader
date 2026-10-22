@@ -1,0 +1,16 @@
+{
+  "format": "fsfader-profile/1",
+  "id": "etc-s4led-s2-lustr-direct-strfan",
+  "manufacturer": "ETC",
+  "model": "Source Four LED Series 2 Lustr",
+  "mode": "Direct StrFan",
+  "footprint": 10,
+  "parameters": {
+    "intensity": {
+      "offset": 8,
+      "bits": 8
+    }
+  },
+  "notes": "Ch1-7 Red, Lime, Amber, Green, Cyan, Blue, Indigo; Ch8 Intensity; Ch9 Strobe; Ch10 Fan.",
+  "source": "ETC Source Four LED Series 2 Lustr user manual (Direct mode with strobe and fan); Open Fixture Library etc/source-four-led-series-2-lustr"
+}

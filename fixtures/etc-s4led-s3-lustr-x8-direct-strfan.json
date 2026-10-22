@@ -1,0 +1,16 @@
+{
+  "format": "fsfader-profile/1",
+  "id": "etc-s4led-s3-lustr-x8-direct-strfan",
+  "manufacturer": "ETC",
+  "model": "Source Four LED Series 3 Lustr X8",
+  "mode": "Direct StrFan",
+  "footprint": 12,
+  "parameters": {
+    "intensity": {
+      "offset": 1,
+      "bits": 8
+    }
+  },
+  "notes": "Ch1 Intensity; Ch2-9 Deep Red, Red, Amber, Lime, Green, Cyan, Blue, Indigo; Ch10 Strobe; Ch11 Curve; Ch12 Fan. Daylight HDR / Tungsten HDR engines use a 10-channel Direct map (make a separate profile).",
+  "source": "ETC Source Four LED Series 3 User Manual v1.2.0, Direct mode"
+}

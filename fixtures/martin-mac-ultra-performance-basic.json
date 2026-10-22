@@ -1,0 +1,36 @@
+{
+  "format": "fsfader-profile/1",
+  "id": "martin-mac-ultra-performance-basic",
+  "manufacturer": "Martin",
+  "model": "MAC Ultra Performance",
+  "mode": "Basic",
+  "footprint": 48,
+  "parameters": {
+    "intensity": {
+      "offset": 2,
+      "bits": 16
+    },
+    "frost": {
+      "offset": 21,
+      "bits": 8
+    },
+    "iris": {
+      "offset": 24,
+      "bits": 8,
+      "range": [
+        0,
+        200
+      ]
+    },
+    "zoom": {
+      "offset": 25,
+      "bits": 16
+    },
+    "edge": {
+      "offset": 27,
+      "bits": 16
+    }
+  },
+  "notes": "Edge = Focus. Iris range limited to 0-200 (open to closed); higher values are iris animation effects.",
+  "source": "Martin MAC Ultra Performance User Guide, Basic mode DMX protocol"
+}

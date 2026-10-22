@@ -1,0 +1,8 @@
+# FS*Fader partition table (16 MB flash)
+# Name,    Type, SubType,  Offset,    Size
+nvs,       data, nvs,      0x9000,    0x6000
+otadata,   data, ota,      0xF000,    0x2000
+ota_0,     app,  ota_0,    0x20000,   0x300000
+ota_1,     app,  ota_1,    0x320000,  0x300000
+fsfdata,   data, nvs,      0x620000,  0x80000
+coredump,  data, coredump, 0x6A0000,  0x40000
